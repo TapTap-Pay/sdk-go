@@ -1,0 +1,54 @@
+name: Release
+
+# Triggered by the cross-repo push from TapTap-Pay/api's release-sdks
+# workflow: api tags itself e.g. "0.0.33" → release-sdks pushes "v0.0.33"
+# onto this repo → this workflow runs.
+#
+# Go modules don't have a registry — `go get github.com/TapTap-Pay/sdk-go@v0.0.33`
+# resolves the tag directly from GitHub. So all we do here is verify
+# the tag actually builds + tests cleanly, then cut a GitHub Release
+# so consumers can read the changelog.
+
+on:
+  push:
+    tags:
+      - 'v*'
+
+jobs:
+  verify:
+    name: Verify release
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-go@v5
+        with:
+          go-version: '1.25'
+
+      - name: Vet
+        run: go vet ./...
+
+      - name: Build
+        run: go build ./...
+
+      - name: Test
+        run: go test -race -count=1 ./...
+
+  release:
+    name: Cut GitHub Release
+    needs: verify
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Create release
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          gh release create "${GITHUB_REF_NAME}" \
+            --title "${GITHUB_REF_NAME}" \
+            --generate-notes

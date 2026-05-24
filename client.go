@@ -18,17 +18,23 @@ import (
 	"github.com/TapTap-Pay/sdk-go/gen/v1/programmatic/webhooks/webhooksv1connect"
 )
 
-// DefaultBaseURL is the production TapTap-Pay API endpoint.
-const DefaultBaseURL = "https://api.taptap.rs"
+// Environment URLs. CI rewrites these from secrets at release time.
+const (
+	ProdBaseURL    = "https://api.taptap.rs"
+	SandboxBaseURL = "https://api.usetaptap.dev"
+)
 
 // Options configures a Client. APIKey is required; everything else has
 // sensible defaults.
 type Options struct {
-	// APIKey is the secret key minted in the dashboard. Sandbox keys
-	// are prefixed sk_test_, live keys sk_live_.
+	// APIKey is the secret key minted in the dashboard.
 	APIKey string
 
-	// BaseURL overrides the API endpoint. Leave empty for production.
+	// Mode selects the environment: "production" (default) or "sandbox".
+	// Ignored when BaseURL is set explicitly.
+	Mode string
+
+	// BaseURL overrides the API endpoint. When empty, resolved from Mode.
 	BaseURL string
 
 	// HTTPClient is used for transport. Leave nil for a sensible
@@ -76,7 +82,11 @@ func New(opts Options) *Client {
 
 	baseURL := opts.BaseURL
 	if baseURL == "" {
-		baseURL = DefaultBaseURL
+		if opts.Mode == "sandbox" {
+			baseURL = SandboxBaseURL
+		} else {
+			baseURL = ProdBaseURL
+		}
 	}
 
 	httpClient := opts.HTTPClient

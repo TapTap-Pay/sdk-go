@@ -513,8 +513,12 @@ type Payment struct {
 	// The return URLs configured on creation. Round-trip verbatim so the
 	// integrator can mirror them in their own UI or in a hosted receipt
 	// page.
-	SuccessUrl    string `protobuf:"bytes,10,opt,name=success_url,json=successUrl,proto3" json:"success_url,omitempty"`
-	CancelUrl     string `protobuf:"bytes,11,opt,name=cancel_url,json=cancelUrl,proto3" json:"cancel_url,omitempty"`
+	SuccessUrl string `protobuf:"bytes,10,opt,name=success_url,json=successUrl,proto3" json:"success_url,omitempty"`
+	CancelUrl  string `protobuf:"bytes,11,opt,name=cancel_url,json=cancelUrl,proto3" json:"cancel_url,omitempty"`
+	// Hosted-checkout URL the integrator should redirect the customer to.
+	// Built server-side from the platform's SANDBOX_URL / PROD_URL config
+	// (based on MODE) so SDK clients never hardcode the host or path.
+	CheckoutUrl   string `protobuf:"bytes,12,opt,name=checkout_url,json=checkoutUrl,proto3" json:"checkout_url,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -622,6 +626,13 @@ func (x *Payment) GetSuccessUrl() string {
 func (x *Payment) GetCancelUrl() string {
 	if x != nil {
 		return x.CancelUrl
+	}
+	return ""
+}
+
+func (x *Payment) GetCheckoutUrl() string {
+	if x != nil {
+		return x.CheckoutUrl
 	}
 	return ""
 }
@@ -1523,7 +1534,7 @@ const file_v1_programmatic_types_types_proto_rawDesc = "" +
 	"\n" +
 	"_bank_nameB\f\n" +
 	"\n" +
-	"_wallet_id\"\xad\x04\n" +
+	"_wallet_id\"\xd0\x04\n" +
 	"\aPayment\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\tR\x02id\x12<\n" +
 	"\x06status\x18\x02 \x01(\x0e2$.programmatic.types.v1.PaymentStatusR\x06status\x12(\n" +
@@ -1540,7 +1551,8 @@ const file_v1_programmatic_types_types_proto_rawDesc = "" +
 	" \x01(\tR\n" +
 	"successUrl\x12\x1d\n" +
 	"\n" +
-	"cancel_url\x18\v \x01(\tR\tcancelUrl\x1a;\n" +
+	"cancel_url\x18\v \x01(\tR\tcancelUrl\x12!\n" +
+	"\fcheckout_url\x18\f \x01(\tR\vcheckoutUrl\x1a;\n" +
 	"\rMetadataEntry\x12\x10\n" +
 	"\x03key\x18\x01 \x01(\tR\x03key\x12\x14\n" +
 	"\x05value\x18\x02 \x01(\tR\x05value:\x028\x01\"\x98\n" +

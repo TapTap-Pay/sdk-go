@@ -3,7 +3,7 @@
 [![Go Reference](https://pkg.go.dev/badge/github.com/TapTap-Pay/sdk-go.svg)](https://pkg.go.dev/github.com/TapTap-Pay/sdk-go)
 [![License](https://img.shields.io/badge/license-Apache_2.0-blue.svg)](LICENSE)
 
-The official Go SDK for the [TapTap-Pay](https://taptap.rs) API.
+The official Go SDK for the [TapTap-Pay](https://usetaptap.com) API.
 
 It wraps the generated [Connect-Go](https://connectrpc.com/) clients with
 API-key authentication, transient-error retries with exponential backoff,
@@ -58,7 +58,7 @@ func main() {
 
 ## Authentication
 
-API keys are minted in the [dashboard](https://app.taptap.rs). Sandbox
+API keys are minted in the [dashboard](https://app.usetaptap.com). Sandbox
 keys are prefixed `sk_test_`, live keys `sk_live_`. The SDK sends them
 as `Authorization: Bearer <key>` on every request.
 
@@ -67,7 +67,7 @@ as `Authorization: Bearer <key>` on every request.
 ```go
 client := taptap.New(taptap.Options{
     APIKey:         "sk_live_...",       // required
-    BaseURL:        "https://api.taptap.rs", // optional override
+    BaseURL:        "https://api.usetaptap.com", // optional override
     MaxRetries:     3,                    // default 3
     RetryBaseDelay: 500 * time.Millisecond, // default 500ms
     UserAgent:      "my-app/1.4.0",       // optional, appended to SDK UA

@@ -1,54 +1,92 @@
 name: Release
 
-# Triggered by the cross-repo push from TapTap-Pay/api's release-sdks
-# workflow: api tags itself e.g. "0.0.33" → release-sdks pushes "v0.0.33"
-# onto this repo → this workflow runs.
+# Triggered on push to main when the commit message contains a semver
+# bump keyword (#patch, #minor, #major). Computes the next version from
+# the repo's own tags (independent of the API version), bumps version.go,
+# verifies, tags, and cuts a GitHub Release.
 #
-# Go modules don't have a registry — `go get github.com/TapTap-Pay/sdk-go@v0.0.33`
-# resolves the tag directly from GitHub. So all we do here is verify
-# the tag actually builds + tests cleanly, then cut a GitHub Release
-# so consumers can read the changelog.
+# Go modules don't need a registry publish — `go get` resolves tags
+# directly from GitHub.
 
 on:
   push:
-    tags:
-      - 'v*'
+    branches: [main]
 
 jobs:
-  verify:
-    name: Verify release
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-
-      - uses: actions/setup-go@v5
-        with:
-          go-version: '1.25'
-
-      - name: Vet
-        run: go vet ./...
-
-      - name: Build
-        run: go build ./...
-
-      - name: Test
-        run: go test -race -count=1 ./...
-
   release:
-    name: Cut GitHub Release
-    needs: verify
+    name: Tag and release
     runs-on: ubuntu-latest
+    if: >-
+      contains(github.event.head_commit.message, '#patch') ||
+      contains(github.event.head_commit.message, '#minor') ||
+      contains(github.event.head_commit.message, '#major')
     permissions:
       contents: write
     steps:
-      - uses: actions/checkout@v4
+      - name: Checkout
+        uses: actions/checkout@v4
         with:
           fetch-depth: 0
 
-      - name: Create release
+      - name: Determine bump type
+        id: bump
+        run: |
+          MSG='${{ github.event.head_commit.message }}'
+          if [[ "$MSG" == *"#major"* ]]; then
+            echo "type=major" >> "$GITHUB_OUTPUT"
+          elif [[ "$MSG" == *"#minor"* ]]; then
+            echo "type=minor" >> "$GITHUB_OUTPUT"
+          else
+            echo "type=patch" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Compute next version
+        id: version
+        run: |
+          set -euo pipefail
+          LATEST=$(git tag --list --sort=-v:refname 'v[0-9]*.[0-9]*.[0-9]*' | head -1)
+          LATEST=${LATEST:-v0.0.0}
+          IFS='.' read -r major minor patch <<< "${LATEST#v}"
+          case "${{ steps.bump.outputs.type }}" in
+            patch) patch=$((patch + 1)) ;;
+            minor) minor=$((minor + 1)); patch=0 ;;
+            major) major=$((major + 1)); minor=0; patch=0 ;;
+          esac
+          echo "tag=v${major}.${minor}.${patch}" >> "$GITHUB_OUTPUT"
+          echo "bare=${major}.${minor}.${patch}" >> "$GITHUB_OUTPUT"
+          echo "Next version: v${major}.${minor}.${patch}"
+
+      - name: Bump version.go
+        run: |
+          sed -i 's|const Version = ".*"|const Version = "${{ steps.version.outputs.bare }}"|' version.go
+
+      - name: Setup Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: '1.25'
+
+      - name: Verify
+        run: |
+          go vet ./...
+          go build ./...
+          go test -race -count=1 ./...
+
+      - name: Commit, tag, push
+        run: |
+          set -euo pipefail
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add version.go
+          if ! git diff --staged --quiet; then
+            git commit -m "chore: release ${{ steps.version.outputs.tag }}"
+          fi
+          git tag -a "${{ steps.version.outputs.tag }}" -m "${{ steps.version.outputs.tag }}"
+          git push origin main --tags
+
+      - name: Create GitHub Release
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          gh release create "${GITHUB_REF_NAME}" \
-            --title "${GITHUB_REF_NAME}" \
+          gh release create "${{ steps.version.outputs.tag }}" \
+            --title "${{ steps.version.outputs.tag }}" \
             --generate-notes

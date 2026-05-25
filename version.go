@@ -1,5 +1,5 @@
 package taptap
 
-// Version is the SDK release version. Bumped in lockstep with the
-// upstream TapTap-Pay API release tag by the release workflow.
-const Version = "0.0.48"
+// Version is the SDK release version. Bumped automatically by the
+// release workflow from the repo's own independent semver tags.
+const Version = "0.0.0"

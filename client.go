@@ -20,7 +20,7 @@ import (
 
 // Environment URLs. CI rewrites these from secrets at release time.
 const (
-	ProdBaseURL    = "https://api.taptap.rs"
+	ProdBaseURL    = "https://api.usetaptap.com"
 	SandboxBaseURL = "https://api.usetaptap.dev"
 )
 

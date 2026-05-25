@@ -13,5 +13,5 @@
 //	    TargetWalletId: walletID,
 //	}))
 //
-// See https://docs.taptap.rs for the full API reference.
+// See https://docs.usetaptap.com for the full API reference.
 package taptap

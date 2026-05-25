@@ -20,8 +20,8 @@ import (
 
 // Environment URLs. CI rewrites these from secrets at release time.
 const (
-	ProdBaseURL    = "https://api.usetaptap.com"
-	SandboxBaseURL = "https://api.usetaptap.dev"
+	ProdBaseURL    = "https://api.usetaptap.com/"
+	SandboxBaseURL = "https://api.usetaptap.dev/"
 )
 
 // Options configures a Client. APIKey is required; everything else has

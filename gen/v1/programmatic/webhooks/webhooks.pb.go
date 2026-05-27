@@ -93,7 +93,7 @@ type CreateWebhookResponse struct {
 	state   protoimpl.MessageState     `protogen:"open.v1"`
 	Webhook *types.WebhookSubscription `protobuf:"bytes,1,opt,name=webhook,proto3" json:"webhook,omitempty"`
 	// HMAC-SHA256 signing secret. Returned **exactly once** — store it on
-	// your side and validate the `X-TapTap-Signature` header on every
+	// your side and validate the `X-Webhook-Signature-V2` header on every
 	// delivery.
 	Secret        string `protobuf:"bytes,2,opt,name=secret,proto3" json:"secret,omitempty"`
 	unknownFields protoimpl.UnknownFields

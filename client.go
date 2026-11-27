@@ -6,16 +6,11 @@ import (
 
 	"connectrpc.com/connect"
 
-	"github.com/TapTap-Pay/sdk-go/gen/v1/programmatic/invoices/invoicesv1connect"
-	"github.com/TapTap-Pay/sdk-go/gen/v1/programmatic/payins/payinsv1connect"
-	"github.com/TapTap-Pay/sdk-go/gen/v1/programmatic/payment_links/payment_linksv1connect"
-	"github.com/TapTap-Pay/sdk-go/gen/v1/programmatic/payments/paymentsv1connect"
-	"github.com/TapTap-Pay/sdk-go/gen/v1/programmatic/payouts/payoutsv1connect"
-	"github.com/TapTap-Pay/sdk-go/gen/v1/programmatic/refunds/refundsv1connect"
-	"github.com/TapTap-Pay/sdk-go/gen/v1/programmatic/transactions/transactionsv1connect"
-	"github.com/TapTap-Pay/sdk-go/gen/v1/programmatic/transfers/transfersv1connect"
-	"github.com/TapTap-Pay/sdk-go/gen/v1/programmatic/wallets/walletsv1connect"
-	"github.com/TapTap-Pay/sdk-go/gen/v1/programmatic/webhooks/webhooksv1connect"
+	bankingv1connect "github.com/TapTap-Pay/sdk-go/gen/taptap/banking/programmatic/v1/programmaticv1connect"
+	developerv1connect "github.com/TapTap-Pay/sdk-go/gen/taptap/developer/programmatic/v1/programmaticv1connect"
+	invoicingv1connect "github.com/TapTap-Pay/sdk-go/gen/taptap/invoicing/programmatic/v1/programmaticv1connect"
+	marketplacev1connect "github.com/TapTap-Pay/sdk-go/gen/taptap/marketplace/programmatic/v1/programmaticv1connect"
+	paymentv1connect "github.com/TapTap-Pay/sdk-go/gen/taptap/payment/programmatic/v1/programmaticv1connect"
 )
 
 // Environment URLs. CI rewrites these from secrets at release time.
@@ -59,17 +54,21 @@ type Options struct {
 
 // Client is the entry point for the TapTap-Pay SDK. Construct one with
 // New; the per-service sub-clients are safe for concurrent use.
+//
+// Every request names the vendor the API key belongs to in its VendorId
+// field (ven_ followed by a UUID). The SDK does not fill it in.
 type Client struct {
-	Invoices     invoicesv1connect.InvoicesServiceClient
-	PayIns       payinsv1connect.PayInsServiceClient
-	PaymentLinks payment_linksv1connect.PaymentLinksServiceClient
-	Payments     paymentsv1connect.PaymentsServiceClient
-	PayOuts      payoutsv1connect.PayOutsServiceClient
-	Refunds      refundsv1connect.RefundsServiceClient
-	Transactions transactionsv1connect.TransactionsServiceClient
-	Transfers    transfersv1connect.TransfersServiceClient
-	Wallets      walletsv1connect.WalletsServiceClient
-	Webhooks     webhooksv1connect.WebhooksServiceClient
+	Banking          bankingv1connect.BankingServiceClient
+	Customers        paymentv1connect.CustomerServiceClient
+	InboundDocuments invoicingv1connect.InboundDocumentServiceClient
+	Invoices         invoicingv1connect.InvoiceServiceClient
+	PaymentLinks     paymentv1connect.PaymentLinkServiceClient
+	Payments         paymentv1connect.PaymentServiceClient
+	Refunds          paymentv1connect.RefundServiceClient
+	Subvendors       marketplacev1connect.SubvendorServiceClient
+	Transactions     paymentv1connect.TransactionServiceClient
+	Wallets          paymentv1connect.WalletServiceClient
+	Webhooks         developerv1connect.WebhookServiceClient
 }
 
 // New constructs a Client. APIKey is required; everything else is
@@ -113,15 +112,16 @@ func New(opts Options) *Client {
 	)
 
 	return &Client{
-		Invoices:     invoicesv1connect.NewInvoicesServiceClient(httpClient, baseURL, clientOpts),
-		PayIns:       payinsv1connect.NewPayInsServiceClient(httpClient, baseURL, clientOpts),
-		PaymentLinks: payment_linksv1connect.NewPaymentLinksServiceClient(httpClient, baseURL, clientOpts),
-		Payments:     paymentsv1connect.NewPaymentsServiceClient(httpClient, baseURL, clientOpts),
-		PayOuts:      payoutsv1connect.NewPayOutsServiceClient(httpClient, baseURL, clientOpts),
-		Refunds:      refundsv1connect.NewRefundsServiceClient(httpClient, baseURL, clientOpts),
-		Transactions: transactionsv1connect.NewTransactionsServiceClient(httpClient, baseURL, clientOpts),
-		Transfers:    transfersv1connect.NewTransfersServiceClient(httpClient, baseURL, clientOpts),
-		Wallets:      walletsv1connect.NewWalletsServiceClient(httpClient, baseURL, clientOpts),
-		Webhooks:     webhooksv1connect.NewWebhooksServiceClient(httpClient, baseURL, clientOpts),
+		Banking:          bankingv1connect.NewBankingServiceClient(httpClient, baseURL, clientOpts),
+		Customers:        paymentv1connect.NewCustomerServiceClient(httpClient, baseURL, clientOpts),
+		InboundDocuments: invoicingv1connect.NewInboundDocumentServiceClient(httpClient, baseURL, clientOpts),
+		Invoices:         invoicingv1connect.NewInvoiceServiceClient(httpClient, baseURL, clientOpts),
+		PaymentLinks:     paymentv1connect.NewPaymentLinkServiceClient(httpClient, baseURL, clientOpts),
+		Payments:         paymentv1connect.NewPaymentServiceClient(httpClient, baseURL, clientOpts),
+		Refunds:          paymentv1connect.NewRefundServiceClient(httpClient, baseURL, clientOpts),
+		Subvendors:       marketplacev1connect.NewSubvendorServiceClient(httpClient, baseURL, clientOpts),
+		Transactions:     paymentv1connect.NewTransactionServiceClient(httpClient, baseURL, clientOpts),
+		Wallets:          paymentv1connect.NewWalletServiceClient(httpClient, baseURL, clientOpts),
+		Webhooks:         developerv1connect.NewWebhookServiceClient(httpClient, baseURL, clientOpts),
 	}
 }

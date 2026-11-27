@@ -3,7 +3,7 @@
 //
 // Run with:
 //
-//	TAPTAP_SECRET=sk_test_... TAPTAP_WALLET_ID=<uuid> \
+//	TAPTAP_API_KEY=taptap_live_... TAPTAP_VENDOR_ID=ven_<uuid> \
 //	    go run ./examples/quickstart
 package main
 
@@ -16,47 +16,57 @@ import (
 	"connectrpc.com/connect"
 
 	"github.com/TapTap-Pay/sdk-go"
-	commonv1 "github.com/TapTap-Pay/sdk-go/gen/v1/common"
-	payment_linksv1 "github.com/TapTap-Pay/sdk-go/gen/v1/programmatic/payment_links"
-	typesv1 "github.com/TapTap-Pay/sdk-go/gen/v1/programmatic/types"
+	commonv1 "github.com/TapTap-Pay/sdk-go/gen/taptap/common/v1"
+	paymentv1 "github.com/TapTap-Pay/sdk-go/gen/taptap/payment/programmatic/v1"
 )
 
 func main() {
-	secret := os.Getenv("TAPTAP_SECRET")
-	wallet := os.Getenv("TAPTAP_WALLET_ID")
-	if secret == "" || wallet == "" {
-		log.Fatal("set TAPTAP_SECRET and TAPTAP_WALLET_ID")
+	apiKey := os.Getenv("TAPTAP_API_KEY")
+	vendorID := os.Getenv("TAPTAP_VENDOR_ID")
+	if apiKey == "" || vendorID == "" {
+		log.Fatal("set TAPTAP_API_KEY and TAPTAP_VENDOR_ID")
 	}
 
 	ctx := context.Background()
-	client := taptap.New(taptap.Options{APIKey: secret})
+	client := taptap.New(taptap.Options{APIKey: apiKey})
 
-	created, err := client.PaymentLinks.CreatePaymentLink(ctx, connect.NewRequest(&payment_linksv1.CreatePaymentLinkRequest{
-		Title:          "Premium plan",
-		Amount:         &commonv1.Money{AmountMinor: 2999, Currency: "EUR"},
-		TargetWalletId: wallet,
+	created, err := client.PaymentLinks.CreatePaymentLink(ctx, connect.NewRequest(&paymentv1.CreatePaymentLinkRequest{
+		VendorId: vendorID,
+		Title:    "Premium plan",
+		Amount:   &commonv1.Money{Currency: "EUR", AmountMinor: 2999},
+		Usage: &paymentv1.PaymentLinkUsage{
+			Usage: &paymentv1.PaymentLinkUsage_Unlimited{Unlimited: true},
+		},
+		IdempotencyKey: taptap.NewIdempotencyKey(),
+	}))
+	if err != nil {
+		if info, ok := taptap.ErrorInfo(err); ok {
+			log.Fatalf("refused: %s %v", info.GetCode(), info.GetParams())
+		}
+		log.Fatal(err)
+	}
+	linkID := created.Msg.GetPaymentLink().GetId()
+	fmt.Println("created:", linkID)
+
+	fetched, err := client.PaymentLinks.GetPaymentLink(ctx, connect.NewRequest(&paymentv1.GetPaymentLinkRequest{
+		VendorId:      vendorID,
+		PaymentLinkId: linkID,
 	}))
 	if err != nil {
 		log.Fatal(err)
 	}
-	fmt.Println("created:", created.Msg.Link.Id)
+	fmt.Println("fetched:", fetched.Msg.GetPaymentLink().GetTitle())
 
-	fetched, err := client.PaymentLinks.GetPaymentLink(ctx, connect.NewRequest(&payment_linksv1.GetPaymentLinkRequest{
-		Id: created.Msg.Link.Id,
-	}))
-	if err != nil {
-		log.Fatal(err)
-	}
-	fmt.Println("fetched:", fetched.Msg.Link.Title)
-
-	fetchPage := func(ctx context.Context, page int32) ([]*typesv1.PaymentLink, *commonv1.PaginatedResponseMeta, error) {
-		resp, err := client.PaymentLinks.ListPaymentLinks(ctx, connect.NewRequest(&payment_linksv1.ListPaymentLinksRequest{
-			Pagination: &commonv1.PaginationRequestData{Page: page, PageSize: 100},
+	fetchPage := func(ctx context.Context, pageToken string) ([]*paymentv1.PaymentLink, string, error) {
+		resp, err := client.PaymentLinks.ListPaymentLinks(ctx, connect.NewRequest(&paymentv1.ListPaymentLinksRequest{
+			VendorId:  vendorID,
+			PageSize:  100,
+			PageToken: pageToken,
 		}))
 		if err != nil {
-			return nil, nil, err
+			return nil, "", err
 		}
-		return resp.Msg.Links, resp.Msg.Meta, nil
+		return resp.Msg.GetPaymentLinks(), resp.Msg.GetNextPageToken(), nil
 	}
 
 	count := 0

@@ -5,6 +5,8 @@ import (
 
 	"connectrpc.com/connect"
 	"github.com/google/uuid"
+
+	commonv1 "github.com/TapTap-Pay/sdk-go/gen/taptap/common/v1"
 )
 
 // errorsAs is a thin wrapper so the rest of the package doesn't need
@@ -19,8 +21,8 @@ func IsNotFound(err error) bool {
 }
 
 // IsAlreadyExists reports whether err is a Connect AlreadyExists
-// error — typically returned when an idempotency_key collides with a
-// prior request whose payload differed.
+// error — the resource being created is already there (e.g. a second
+// webhook subscription for the same URL).
 func IsAlreadyExists(err error) bool {
 	return codeOf(err) == connect.CodeAlreadyExists
 }
@@ -56,6 +58,43 @@ func IsRateLimited(err error) bool {
 // payment).
 func IsFailedPrecondition(err error) bool {
 	return codeOf(err) == connect.CodeFailedPrecondition
+}
+
+// IsAborted reports whether err is a Connect Aborted error — returned
+// with code IDEMPOTENCY_KEY_CONFLICT when an idempotency key is reused
+// for a request whose content differs from the first one.
+func IsAborted(err error) bool {
+	return codeOf(err) == connect.CodeAborted
+}
+
+// ErrorInfo returns the taptap.common.v1.ErrorInfo detail the API
+// attaches to every refusal: a stable machine code (e.g.
+// PAYMENT_LINK_NOT_FOUND), the parameters around it, and an English
+// debug message. Branch on GetCode(), never on the message. The second
+// result is false when err is not a Connect error or carries no such
+// detail (e.g. a transport failure).
+func ErrorInfo(err error) (*commonv1.ErrorInfo, bool) {
+	var connectErr *connect.Error
+	if !errors.As(err, &connectErr) {
+		return nil, false
+	}
+	for _, detail := range connectErr.Details() {
+		msg, valueErr := detail.Value()
+		if valueErr != nil {
+			continue
+		}
+		if info, ok := msg.(*commonv1.ErrorInfo); ok {
+			return info, true
+		}
+	}
+	return nil, false
+}
+
+// ErrorCode returns the stable machine code of a refusal, or "" when
+// err carries no ErrorInfo detail.
+func ErrorCode(err error) string {
+	info, _ := ErrorInfo(err)
+	return info.GetCode()
 }
 
 func codeOf(err error) connect.Code {
